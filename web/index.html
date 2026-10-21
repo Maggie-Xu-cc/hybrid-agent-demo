@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>混合推理 Agent Demo</title>
+<style>
+  :root {
+    --bg: #faf9f6;
+    --card: #ffffff;
+    --line: #e6e3dc;
+    --text: #22221f;
+    --muted: #7c7a73;
+    --easy: #0f6e56;
+    --easy-bg: #e1f5ee;
+    --hard: #854f0b;
+    --hard-bg: #faeeda;
+    --accent: #534ab7;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+    line-height: 1.65; padding: 32px 20px 64px;
+  }
+  .wrap { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 19px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 18px;
+  }
+  textarea {
+    width: 100%; min-height: 84px; resize: vertical; font: inherit;
+    padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+    background: #fdfcfa; color: var(--text); outline: none;
+  }
+  textarea:focus { border-color: #c9c4f0; }
+  .row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+  button {
+    font: inherit; cursor: pointer; border-radius: 8px;
+    border: 1px solid var(--line); background: #fff; color: var(--text);
+    padding: 6px 14px;
+  }
+  button.primary {
+    background: var(--accent); border-color: var(--accent); color: #fff;
+    padding: 8px 20px; font-weight: 500;
+  }
+  button.ghost { font-size: 12px; padding: 4px 10px; color: var(--muted); }
+  button:disabled { opacity: .5; cursor: default; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+  .badge {
+    display: inline-block; font-size: 12px; padding: 2px 9px;
+    border-radius: 999px; font-weight: 500;
+  }
+  .badge.easy { background: var(--easy-bg); color: var(--easy); }
+  .badge.hard { background: var(--hard-bg); color: var(--hard); }
+  .meta { display: flex; gap: 18px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin: 10px 0 14px; }
+  .meta b { color: var(--text); font-weight: 500; }
+  .answer { white-space: pre-wrap; font-size: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 18px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .stat .k { font-size: 11px; color: var(--muted); }
+  .stat .v { font-size: 16px; font-weight: 600; margin-top: 2px; }
+  .hidden { display: none; }
+  .err { color: #a32d2d; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>混合推理 Agent · 路由演示</h1>
+  <div class="sub">简单请求走本地小模型，复杂请求升级到云端大模型。每一笔 Token 与成本都会被记录。</div>
+
+  <div class="card">
+    <textarea id="q" placeholder="输入一个问题，例如：把「今天天气不错」翻译成英文"></textarea>
+    <div class="chips">
+      <button class="ghost" data-q="你好，你是谁？">闲聊</button>
+      <button class="ghost" data-q="把「会议推迟到周四下午三点」翻译成英文">翻译</button>
+      <button class="ghost" data-q="用 Python 写一个带超时控制的进程池，并解释为什么用 deque 而不是 list 做任务队列">写代码</button>
+      <button class="ghost" data-q="分析一下 8GB 显存跑 14B 模型 4bit 量化时的显存占用，并给出优化方案">长推理</button>
+    </div>
+    <div class="row">
+      <button class="primary" id="send">发送</button>
+      <button id="clear" class="ghost">清空统计</button>
+      <span id="hint" class="sub" style="margin:0"></span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="result" style="margin-top:14px">
+    <div><span id="badge" class="badge"></span> <span id="reason" class="sub" style="margin:0"></span></div>
+    <div class="meta">
+      <span>决策依据 <b id="by"></b></span>
+      <span>耗时 <b id="lat"></b></span>
+      <span>成本 <b id="cost"></b></span>
+      <span>全云端 <b id="base"></b></span>
+      <span>节省 <b id="saved"></b></span>
+    </div>
+    <div class="answer" id="answer"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="k">请求数</div><div class="v" id="s-runs">0</div></div>
+    <div class="stat"><div class="k">累计成本</div><div class="v" id="s-cost">¥0</div></div>
+    <div class="stat"><div class="k">较全云端节省</div><div class="v" id="s-save">0%</div></div>
+    <div class="stat"><div class="k">平均延迟</div><div class="v" id="s-lat">0ms</div></div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <div class="sub" style="margin:0 0 4px">最近请求</div>
+    <table>
+      <thead><tr><th>时间</th><th>问题</th><th>路由</th><th>耗时</th><th>成本</th></tr></thead>
+      <tbody id="recent"></tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n, d = 4) => Number(n).toFixed(d);
+
+document.querySelectorAll('[data-q]').forEach((b) => {
+  b.onclick = () => { $('q').value = b.dataset.q; };
+});
+
+async function refresh() {
+  const r = await fetch('/api/stats');
+  const { summary: s, recent } = await r.json();
+  $('s-runs').textContent = s.runs;
+  $('s-cost').textContent = '¥' + fmt(s.cost_cny, 4);
+  $('s-save').textContent = (s.saved_ratio * 100).toFixed(1) + '%';
+  $('s-lat').textContent = s.avg_latency_ms + 'ms';
+  $('recent').innerHTML = recent.map((x) => `
+    <tr>
+      <td>${x.ts.slice(11)}</td>
+      <td>${x.query.slice(0, 26)}</td>
+      <td>${x.route}</td>
+      <td>${x.latency_ms}ms</td>
+      <td>¥${fmt(x.cost_cny, 6)}</td>
+    </tr>`).join('');
+}
+
+async function send() {
+  const query = $('q').value.trim();
+  if (!query) return;
+  const btn = $('send');
+  btn.disabled = true;
+  $('hint').textContent = '推理中…';
+  try {
+    const r = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query })
+    });
+    const d = await r.json();
+    if (d.error) { $('hint').textContent = d.error; return; }
+
+    $('result').classList.remove('hidden');
+    $('badge').textContent = d.route === 'easy' ? '本地小模型' : '云端大模型';
+    $('badge').className = 'badge ' + d.route;
+    $('reason').textContent = d.reason + (d.escalated ? ' · 已升级' : '');
+    $('by').textContent = d.decided_by;
+    $('lat').textContent = d.latency_ms + 'ms';
+    $('cost').textContent = '¥' + fmt(d.cost_cny, 6);
+    $('base').textContent = '¥' + fmt(d.baseline_cost_cny, 6);
+    const saved = d.baseline_cost_cny > 0 ? (1 - d.cost_cny / d.baseline_cost_cny) : 0;
+    $('saved').textContent = (saved * 100).toFixed(0) + '%';
+    $('answer').textContent = d.answer || '(空回答)';
+    $('hint').textContent = '';
+    refresh();
+  } catch (e) {
+    $('hint').textContent = '请求失败：' + e;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+$('send').onclick = send;
+$('q').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send();
+});
+$('clear').onclick = () => { if (confirm('仅清空页面显示，数据库记录保留')) location.reload(); };
+
+refresh();
+</script>
+</body>
+</html>
