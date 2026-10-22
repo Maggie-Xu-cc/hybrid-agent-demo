@@ -62,7 +62,7 @@ def chat(
     temperature: float = 0.3,
 ) -> Tuple[str, int, int]:
     """返回 (文本, 输入 token, 输出 token)。"""
-    if settings.mock_mode:
+    if settings.mock_mode:                  # 离线假模型
         return _mock_chat(messages, model, max_tokens)
 
     if client is None:

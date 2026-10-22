@@ -38,6 +38,12 @@ def api_stats() -> dict:
     return {"summary": store.stats(), "recent": store.recent(8)}
 
 
+@app.post("/api/clear")
+def api_clear() -> dict:
+    deleted = store.clear()
+    return {"deleted": deleted, "summary": store.stats()}
+
+
 @app.get("/healthz")
 def healthz() -> dict:
     return {"ok": True}

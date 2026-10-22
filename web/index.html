@@ -181,7 +181,19 @@ $('send').onclick = send;
 $('q').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) send();
 });
-$('clear').onclick = () => { if (confirm('仅清空页面显示，数据库记录保留')) location.reload(); };
+$('clear').onclick = async () => {
+  if (!confirm('将删除全部记账记录，不可恢复。确定继续？')) return;
+  try {
+    const r = await fetch('/api/clear', { method: 'POST' });
+    const d = await r.json();
+    $('result').classList.add('hidden');
+    $('hint').textContent = '已清空 ' + d.deleted + ' 条记录';
+    setTimeout(() => { $('hint').textContent = ''; }, 2500);
+    refresh();
+  } catch (e) {
+    $('hint').textContent = '清空失败：' + e;
+  }
+};
 
 refresh();
 </script>

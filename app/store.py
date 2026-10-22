@@ -7,19 +7,19 @@ from .config import settings
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    ts TEXT NOT NULL,
-    query TEXT NOT NULL,
-    route TEXT NOT NULL,
-    reason TEXT,
-    decided_by TEXT,
-    model TEXT,
-    latency_ms INTEGER,
-    tokens_in INTEGER,
-    tokens_out INTEGER,
-    cost_cny REAL,
-    baseline_cost_cny REAL,
-    escalated INTEGER DEFAULT 0
+    id INTEGER PRIMARY KEY AUTOINCREMENT,   -- 自增主键，一条请求一行
+    ts TEXT NOT NULL,                        -- 时间戳
+    query TEXT NOT NULL,                     -- 原始问题
+    route TEXT NOT NULL,                     -- 判定结果 easy/hard
+    reason TEXT,                             -- 判定理由
+    decided_by TEXT,                         -- 谁判定的：rule/model/default
+    model TEXT,                              -- 模型
+    latency_ms INTEGER,                      -- 端到端延迟
+    tokens_in INTEGER,                       -- 输入 token
+    tokens_out INTEGER,                      -- 输出 token
+    cost_cny REAL,                           -- 实付成本
+    baseline_cost_cny REAL,                  -- 全云端基线成本
+    escalated INTEGER DEFAULT 0              -- 是否触发升级重答
 );
 """
 
@@ -70,6 +70,13 @@ def record(
         )
 
 
+def clear() -> int:
+    """删除全部记账记录，返回删除的条数（不可恢复）。"""
+    with _conn() as conn:
+        cur = conn.execute("DELETE FROM runs")
+        return cur.rowcount or 0
+
+
 def stats() -> dict:
     with _conn() as conn:
         row = conn.execute(
@@ -100,7 +107,7 @@ def stats() -> dict:
         "hard": by_route.get("hard", 0),
     }
 
-
+# 给演示页面底部“最近 10 条调用记录”
 def recent(limit: int = 10) -> list[dict]:
     with _conn() as conn:
         rows = conn.execute(
