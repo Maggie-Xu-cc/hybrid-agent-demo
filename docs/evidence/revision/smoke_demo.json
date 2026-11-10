@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-09",
+  "mode": "MOCK, separate process, loopback HTTP",
+  "elapsed_seconds": 0.656,
+  "python": "3.13.14",
+  "health": {
+    "ok": true,
+    "mock": true
+  },
+  "three_inputs": [
+    {
+      "query": "你好",
+      "route": "easy",
+      "model": "Qwen2.5-7B-AWQ"
+    },
+    {
+      "query": "用 Python 写一个带超时的进程池",
+      "route": "hard",
+      "model": "deepseek-chat"
+    },
+    {
+      "query": "帮我 review 这段 SQL：select * from orders where status=1",
+      "route": "hard",
+      "model": "deepseek-chat"
+    }
+  ],
+  "persisted_requests": 3,
+  "external_user_validation": false,
+  "fresh_dependency_install": false
+}

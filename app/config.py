@@ -20,7 +20,7 @@ except ImportError:
 @dataclass
 class Settings:
     local_base_url: str = os.getenv("LOCAL_BASE_URL", "http://127.0.0.1:8000/v1")
-    local_model: str = os.getenv("LOCAL_MODEL", "Qwen2.5-7B-AWQ")
+    local_model: str = os.getenv("LOCAL_MODEL", "Qwen/Qwen2.5-1.5B-Instruct")
     local_api_key: str = os.getenv("LOCAL_API_KEY", "EMPTY")
 
     cloud_base_url: str = os.getenv("CLOUD_BASE_URL", "https://api.deepseek.com/v1")

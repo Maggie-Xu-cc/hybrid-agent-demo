@@ -8,7 +8,7 @@ import time
 
 from .clients import ProviderError, call_cloud, call_local
 from .config import settings
-from .router import decide
+from .router import decide, Route
 from . import store
 
 SYSTEM = (
@@ -36,106 +36,70 @@ def run(query: str, force_route: str | None = None) -> dict:
     query = (query or "").strip()
     if not query:
         return {"error": "empty query"}
-
     started = time.perf_counter()
-
-    route = decide(query)
-    if force_route in ("easy", "hard"):
-        route.difficulty = force_route
-        route.reason = f"强制{force_route}"
-
-    messages = [
-        {"role": "system", "content": SYSTEM},
-        {"role": "user", "content": query},
-    ]
-
-    # 分开计账：本地 token 与云端 token 单价不同
-    local_in, local_out = route.tokens_in, route.tokens_out  # 路由本身的推理开销
+    route = (Route(force_route, f"强制{force_route}", "forced")
+             if force_route in ("easy", "hard") else decide(query))
+    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": query}]
+    local_in, local_out = route.tokens_in, route.tokens_out
     cloud_in = cloud_out = 0
-
-    escalated = False
-    degraded = False
-    answer = ""
-    model_used = ""
-
+    escalated = degraded = escalation_attempted = escalation_failed = False
+    answer = model_used = error = ""
     if route.difficulty == "easy":
         try:
-            answer, tin, tout = call_local(messages)
-            local_in += tin
-            local_out += tout
+            answer, ti, to = call_local(messages)
+            local_in += ti; local_out += to
             model_used = settings.local_model
-        except ProviderError as exc:
+        except ProviderError:
             degraded = True
-            answer, tin, tout = call_cloud(messages)
-            cloud_in += tin
-            cloud_out += tout
-            model_used = settings.cloud_model
-            route.reason = f"{route.reason}(本地不可用)"
-
-        if not degraded and settings.enable_escalation and _needs_escalation(answer):
-            escalated = True
             try:
-                answer2, tin2, tout2 = call_cloud(messages)
-                cloud_in += tin2
-                cloud_out += tout2
+                answer, ti, to = call_cloud(messages)
+                cloud_in += ti; cloud_out += to
+                model_used = settings.cloud_model
+            except ProviderError:
+                error = "local_and_cloud_failed"
+        if not error and not degraded and settings.enable_escalation and _needs_escalation(answer):
+            escalation_attempted = True
+            try:
+                answer2, ti, to = call_cloud(messages)
+                cloud_in += ti; cloud_out += to
                 answer = answer2
                 model_used = f"{settings.local_model} -> {settings.cloud_model}"
+                escalated = True
             except ProviderError:
-                pass  # 升级失败保留本地答案，不阻塞主流程
+                escalation_failed = True
     else:
         try:
-            answer, tin, tout = call_cloud(messages)
-            cloud_in += tin
-            cloud_out += tout
+            answer, ti, to = call_cloud(messages)
+            cloud_in += ti; cloud_out += to
             model_used = settings.cloud_model
         except ProviderError:
             degraded = True
-            answer, tin, tout = call_local(messages)
-            local_in += tin
-            local_out += tout
-            model_used = settings.local_model
-            route.reason = f"{route.reason}(云端不可用)"
-
-    latency_ms = int((time.perf_counter() - started) * 1000)
-    tokens_in = local_in + cloud_in
-    tokens_out = local_out + cloud_out
-
-    cost = (
-        (local_in + local_out) / 1000 * settings.price_local_per_1k
-        + cloud_in / 1000 * settings.price_cloud_in_per_1k
-        + cloud_out / 1000 * settings.price_cloud_out_per_1k
-    )
-    # 基线：同样的 token 量全部走云端
-    baseline = (
-        tokens_in / 1000 * settings.price_cloud_in_per_1k
-        + tokens_out / 1000 * settings.price_cloud_out_per_1k
-    )
-
-    store.record(
-        query=query,
-        route=route.difficulty,
-        reason=route.reason,
-        decided_by=route.by,
-        model=model_used,
-        latency_ms=latency_ms,
-        tokens_in=tokens_in,
-        tokens_out=tokens_out,
-        cost=cost,
-        baseline_cost=baseline,
-        escalated=escalated,
-    )
-
-    return {
-        "answer": answer,
-        "route": route.difficulty,
-        "reason": route.reason,
-        "decided_by": route.by,
-        "model": model_used,
-        "latency_ms": latency_ms,
-        "tokens_in": tokens_in,
-        "tokens_out": tokens_out,
-        "cost_cny": round(cost, 6),
-        "baseline_cost_cny": round(baseline, 6),
-        "escalated": escalated,
-        "degraded": degraded,
-    }
+            try:
+                answer, ti, to = call_local(messages)
+                local_in += ti; local_out += to
+                model_used = settings.local_model
+            except ProviderError:
+                error = "cloud_and_local_failed"
+    tokens_in, tokens_out = local_in + cloud_in, local_out + cloud_out
+    cost = ((local_in + local_out) / 1000 * settings.price_local_per_1k
+            + cloud_in / 1000 * settings.price_cloud_in_per_1k
+            + cloud_out / 1000 * settings.price_cloud_out_per_1k)
+    baseline = (tokens_in / 1000 * settings.price_cloud_in_per_1k
+                + tokens_out / 1000 * settings.price_cloud_out_per_1k)
+    latency = int((time.perf_counter() - started) * 1000)
+    store.record(query=query, route=route.difficulty, reason=route.reason, decided_by=route.by,
+        model=model_used, latency_ms=latency, tokens_in=tokens_in, tokens_out=tokens_out,
+        cost=cost, baseline_cost=baseline, escalated=escalated, degraded=degraded,
+        escalation_attempted=escalation_attempted, escalation_failed=escalation_failed,
+        error=error, local_tokens_in=local_in, local_tokens_out=local_out,
+        cloud_tokens_in=cloud_in, cloud_tokens_out=cloud_out)
+    result = {"answer": answer, "route": route.difficulty, "reason": route.reason,
+        "decided_by": route.by, "model": model_used, "latency_ms": latency,
+        "tokens_in": tokens_in, "tokens_out": tokens_out,
+        "local_tokens_in": local_in, "local_tokens_out": local_out,
+        "cloud_tokens_in": cloud_in, "cloud_tokens_out": cloud_out,
+        "cost_cny": round(cost, 6), "baseline_cost_cny": round(baseline, 6),
+        "escalated": escalated, "degraded": degraded,
+        "escalation_attempted": escalation_attempted, "escalation_failed": escalation_failed}
+    if error: result["error"] = error
+    return result

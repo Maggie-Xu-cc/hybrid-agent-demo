@@ -1,0 +1,44 @@
+{
+  "mock": true,
+  "warning": "MOCK data is not GPU/quality evidence",
+  "independent_cloud_baseline_valid": false,
+  "summaries": [
+    {
+      "strategy": "local",
+      "n": 24,
+      "errors": 0,
+      "degraded": 0,
+      "escalated": 0,
+      "escalation_failed": 0,
+      "cost_cny": 0.002471,
+      "mean_latency_ms": 0,
+      "p95_nearest_ms": 0,
+      "routing_accuracy": null
+    },
+    {
+      "strategy": "cloud",
+      "n": 24,
+      "errors": 0,
+      "degraded": 0,
+      "escalated": 0,
+      "escalation_failed": 0,
+      "cost_cny": 0.008795,
+      "mean_latency_ms": 0,
+      "p95_nearest_ms": 0,
+      "routing_accuracy": null
+    },
+    {
+      "strategy": "hybrid",
+      "n": 24,
+      "errors": 0,
+      "degraded": 0,
+      "escalated": 0,
+      "escalation_failed": 0,
+      "cost_cny": 0.006614,
+      "mean_latency_ms": 0,
+      "p95_nearest_ms": 0,
+      "routing_accuracy": 0.875
+    }
+  ],
+  "hybrid_vs_independent_cloud": null
+}

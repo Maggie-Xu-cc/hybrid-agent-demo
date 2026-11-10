@@ -60,15 +60,27 @@ def chat(
     messages: List[dict],
     max_tokens: int,
     temperature: float = 0.3,
+    *, base_url: str = "", api_key: str = "",
 ) -> Tuple[str, int, int]:
     """返回 (文本, 输入 token, 输出 token)。"""
     if settings.mock_mode:                  # 离线假模型
         return _mock_chat(messages, model, max_tokens)
 
     if client is None:
-        raise ProviderError(
-            "本机未安装 openai 包：pip install openai，或改用 *_stdlib.py 工具链"
-        )
+        import json
+        import urllib.request
+        payload = {"model": model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature}
+        request = urllib.request.Request(base_url.rstrip("/") + "/chat/completions",
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + (api_key or "EMPTY")})
+        try:
+            with urllib.request.urlopen(request, timeout=120) as response:
+                body = json.loads(response.read().decode("utf-8"))
+            text = body["choices"][0]["message"]["content"] or ""
+            usage = body.get("usage") or {}
+            return text.strip(), int(usage.get("prompt_tokens", 0)), int(usage.get("completion_tokens", 0))
+        except Exception as exc:
+            raise ProviderError(f"{type(exc).__name__}: {exc}") from exc
 
     try:
         resp = client.chat.completions.create(
@@ -93,6 +105,7 @@ def call_local(messages: List[dict], max_tokens: int | None = None) -> Tuple[str
         settings.local_model,
         messages,
         max_tokens or settings.local_max_tokens,
+        base_url=settings.local_base_url, api_key=settings.local_api_key,
     )
 
 
@@ -102,4 +115,5 @@ def call_cloud(messages: List[dict], max_tokens: int | None = None) -> Tuple[str
         settings.cloud_model,
         messages,
         max_tokens or settings.cloud_max_tokens,
+        base_url=settings.cloud_base_url, api_key=settings.cloud_api_key,
     )

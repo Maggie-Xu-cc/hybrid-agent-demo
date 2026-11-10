@@ -2,6 +2,7 @@
 
 import sqlite3
 import time
+from contextlib import contextmanager
 
 from .config import settings
 
@@ -24,15 +25,28 @@ CREATE TABLE IF NOT EXISTS runs (
 """
 
 
-def _conn() -> sqlite3.Connection:
+@contextmanager
+def _conn():
     conn = sqlite3.connect(settings.db_path, timeout=5)
     conn.row_factory = sqlite3.Row
-    return conn
+    try:
+        with conn:
+            yield conn
+    finally:
+        conn.close()
 
 
 def init() -> None:
     with _conn() as conn:
         conn.executescript(SCHEMA)
+        existing = {row[1] for row in conn.execute("PRAGMA table_info(runs)")}
+        additions = {"degraded": "INTEGER DEFAULT 0", "escalation_attempted": "INTEGER DEFAULT 0",
+            "escalation_failed": "INTEGER DEFAULT 0", "error": "TEXT DEFAULT ''",
+            "local_tokens_in": "INTEGER DEFAULT 0", "local_tokens_out": "INTEGER DEFAULT 0",
+            "cloud_tokens_in": "INTEGER DEFAULT 0", "cloud_tokens_out": "INTEGER DEFAULT 0"}
+        for name, sql_type in additions.items():
+            if name not in existing:
+                conn.execute(f"ALTER TABLE runs ADD COLUMN {name} {sql_type}")
 
 
 def record(
@@ -47,6 +61,9 @@ def record(
     cost: float,
     baseline_cost: float,
     escalated: bool,
+    degraded: bool = False, escalation_attempted: bool = False, escalation_failed: bool = False,
+    error: str = "", local_tokens_in: int = 0, local_tokens_out: int = 0,
+    cloud_tokens_in: int = 0, cloud_tokens_out: int = 0,
 ) -> None:
     with _conn() as conn:
         conn.execute(
@@ -68,6 +85,11 @@ def record(
                 1 if escalated else 0,
             ),
         )
+        conn.execute("UPDATE runs SET degraded=?, escalation_attempted=?, escalation_failed=?, error=?, "
+            "local_tokens_in=?, local_tokens_out=?, cloud_tokens_in=?, cloud_tokens_out=? "
+            "WHERE id=last_insert_rowid()",
+            (int(degraded), int(escalation_attempted), int(escalation_failed), error,
+             local_tokens_in, local_tokens_out, cloud_tokens_in, cloud_tokens_out))
 
 
 def clear() -> int:
@@ -83,7 +105,9 @@ def stats() -> dict:
             "SELECT COUNT(*) n, COALESCE(SUM(cost_cny),0) cost,"
             " COALESCE(SUM(baseline_cost_cny),0) base,"
             " COALESCE(AVG(latency_ms),0) lat,"
-            " COALESCE(SUM(escalated),0) esc FROM runs"
+            " COALESCE(SUM(escalated),0) esc, COALESCE(SUM(degraded),0) deg,"
+            " COALESCE(SUM(escalation_attempted),0) attempts, COALESCE(SUM(escalation_failed),0) failed,"
+            " COALESCE(SUM(CASE WHEN error != '' THEN 1 ELSE 0 END),0) errors FROM runs"
         ).fetchone()
         by_route = {
             r["route"]: r["n"]
@@ -103,6 +127,8 @@ def stats() -> dict:
         "saved_ratio": round(saved, 4),
         "avg_latency_ms": int(row["lat"] or 0),
         "escalated": int(row["esc"] or 0),
+        "degraded": int(row["deg"] or 0), "escalation_attempted": int(row["attempts"] or 0),
+        "escalation_failed": int(row["failed"] or 0), "errors": int(row["errors"] or 0),
         "easy": by_route.get("easy", 0),
         "hard": by_route.get("hard", 0),
     }

@@ -1,0 +1,96 @@
+{
+  "kind": "scenario assumptions, not new GPU measurements",
+  "assumptions": {
+    "active_hours": 8,
+    "local_ratio": 0.6,
+    "peak_factor": 5,
+    "util": 0.7,
+    "classifier_ratio": 0.3,
+    "classifier_s": 0.05,
+    "escalation_ratio_of_local": 0.2,
+    "card_cny_per_hour": 4
+  },
+  "rows": [
+    {
+      "daily": 500,
+      "service_s_assumption": 0.5,
+      "peak_qps": 0.08680555555555555,
+      "cards_including_redundancy": 1,
+      "monthly_total_cny": 1018.5,
+      "cloud_baseline_cny": 112.5,
+      "saved_percent": -805.3
+    },
+    {
+      "daily": 500,
+      "service_s_assumption": 1.0,
+      "peak_qps": 0.08680555555555555,
+      "cards_including_redundancy": 1,
+      "monthly_total_cny": 1018.5,
+      "cloud_baseline_cny": 112.5,
+      "saved_percent": -805.3
+    },
+    {
+      "daily": 500,
+      "service_s_assumption": 3.0,
+      "peak_qps": 0.08680555555555555,
+      "cards_including_redundancy": 1,
+      "monthly_total_cny": 1018.5,
+      "cloud_baseline_cny": 112.5,
+      "saved_percent": -805.3
+    },
+    {
+      "daily": 5000,
+      "service_s_assumption": 0.5,
+      "peak_qps": 0.8680555555555556,
+      "cards_including_redundancy": 1,
+      "monthly_total_cny": 1545.0,
+      "cloud_baseline_cny": 1125.0,
+      "saved_percent": -37.3
+    },
+    {
+      "daily": 5000,
+      "service_s_assumption": 1.0,
+      "peak_qps": 0.8680555555555556,
+      "cards_including_redundancy": 1,
+      "monthly_total_cny": 1545.0,
+      "cloud_baseline_cny": 1125.0,
+      "saved_percent": -37.3
+    },
+    {
+      "daily": 5000,
+      "service_s_assumption": 3.0,
+      "peak_qps": 0.8680555555555556,
+      "cards_including_redundancy": 3,
+      "monthly_total_cny": 3465.0,
+      "cloud_baseline_cny": 1125.0,
+      "saved_percent": -208.0
+    },
+    {
+      "daily": 50000,
+      "service_s_assumption": 0.5,
+      "peak_qps": 8.680555555555555,
+      "cards_including_redundancy": 5,
+      "monthly_total_cny": 10650.0,
+      "cloud_baseline_cny": 11250.0,
+      "saved_percent": 5.3
+    },
+    {
+      "daily": 50000,
+      "service_s_assumption": 1.0,
+      "peak_qps": 8.680555555555555,
+      "cards_including_redundancy": 9,
+      "monthly_total_cny": 14490.0,
+      "cloud_baseline_cny": 11250.0,
+      "saved_percent": -28.8
+    },
+    {
+      "daily": 50000,
+      "service_s_assumption": 3.0,
+      "peak_qps": 8.680555555555555,
+      "cards_including_redundancy": 24,
+      "monthly_total_cny": 28890.0,
+      "cloud_baseline_cny": 11250.0,
+      "saved_percent": -156.8
+    }
+  ]
+}

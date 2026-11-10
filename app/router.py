@@ -18,6 +18,7 @@ from .config import settings
 
 HARD_PATTERNS = [
     r"```",
+    r"\b(?:select|with)\b[\s\S]{0,600}\b(?:from|join)\b|\breview\b.{0,20}\bsql\b",
     r"\bdef\s+\w+\s*\(",
     r"\bclass\s+\w+",
     r"import\s+\w+",
@@ -107,11 +108,11 @@ def _model_route(query: str) -> Route | None:
     elapsed = int((time.perf_counter() - started) * 1000)
     data = _parse_json(text)
     if not data:
-        return None
+        return Route("easy" if len(query) < 120 else "hard", "分类JSON无效，长度兜底", "default", elapsed, tin, tout)
 
     difficulty = str(data.get("difficulty", "")).lower()
     if difficulty not in ("easy", "hard"):
-        return None
+        return Route("easy" if len(query) < 120 else "hard", "分类标签无效，长度兜底", "default", elapsed, tin, tout)
 
     reason = str(data.get("reason", ""))[:20] or "模型判定"
     return Route(difficulty, reason, "model", elapsed, tin, tout)

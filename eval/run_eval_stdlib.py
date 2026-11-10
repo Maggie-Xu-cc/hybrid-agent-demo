@@ -232,7 +232,7 @@ def main() -> int:
     if any(s["strategy"] == "全云端" and s["cloud_fail"] >= s["n"] for s in summary):
         print("  ⛔ '全云端' 全部失败：表中的\"全云端\"成本其实也是本地成本，不可作为云端基线。")
 
-    out_csv = ROOT / "eval" / "result_stdlib.csv"
+    out_csv = ROOT / "eval" / "result_stdlib.csv"    #输出原始数据，可复算
     with out_csv.open("w", newline="", encoding="utf-8-sig") as f:
         w = csv.writer(f)
         w.writerow(["query", "gold", "pred", "decided_by", "reason", "model", "latency_ms",

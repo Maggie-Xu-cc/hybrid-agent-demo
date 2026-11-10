@@ -1,0 +1,7 @@
+用户输入与 Web 看板
+↓ POST /api/chat
+FastAPI → 规则判定 → 小模型分类 → 长度兜底
+↓ easy                         ↓ hard
+本地 Qwen2.5 1.5B              云端 DeepSeek
+↓ 短答或不确定表述 → 云端升级重答
+SQLite 逐请求记账 → /api/stats 成本与延迟汇总

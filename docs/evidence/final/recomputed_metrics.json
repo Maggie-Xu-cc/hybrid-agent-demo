@@ -1,0 +1,36 @@
+{
+  "n": 24,
+  "correct": 23,
+  "accuracy": 0.9583333333333334,
+  "wilson95": [
+    0.7975777375115778,
+    0.992606734645195
+  ],
+  "mean_latency_ms": 2165.2083333333335,
+  "median_latency_ms": 1850.0,
+  "p95_nearest_ms": 4513.0,
+  "cost_cny": 0.071379,
+  "same_token_baseline_cny": 0.083465,
+  "tokens_in": 2857,
+  "tokens_out": 4612,
+  "rule_count": 17,
+  "escalated_count": 3,
+  "csv_error_count": 0,
+  "branches": {
+    "/home/jovyan/models/qwen2.5-1.5b": {
+      "n": 11,
+      "cost_cny": 0.004088,
+      "mean_latency_ms": 1301.1818181818182
+    },
+    "/home/jovyan/models/qwen2.5-1.5b -> deepseek-chat": {
+      "n": 3,
+      "cost_cny": 0.002384,
+      "mean_latency_ms": 1384.6666666666667
+    },
+    "deepseek-chat": {
+      "n": 10,
+      "cost_cny": 0.064907,
+      "mean_latency_ms": 3349.8
+    }
+  }
+}
