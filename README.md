@@ -1,39 +1,39 @@
 # Hybrid Routing Agent 混合推理路由系统
 
 ## 修订版快速运行与新增证据
-+
-+本交付修订于2026-11-09，历史GPU实验不变。本次新增29项自动回归、独立进程HTTP演示、统一三策略评测与服务时间容量模型。MOCK结果只验证工程，不冒充模型质量。外部验证已于2026-11-10由未参与开发者完成（见下方记录）；演示视频已补充，见 docs/demo.mp4（2分33秒）。
-+
-+最短离线运行路径不需要安装第三方包（在项目根目录，已有Python 3.10+）：
-+
-+```powershell
-+$env:MOCK_MODE='1'
-+$env:DB_PATH='runs_demo.db'
-+python tools/serve_stdlib.py --port 8081
-+```
-+
-+访问 http://127.0.0.1:8081，依次输入“你好”、进程池任务和SQL review，查看路由与统计。该轻量入口复用app.agent/store，不提供在线清空数据库；原FastAPI界面仍可选装requirements.txt后使用。
-+
-+```bash
-+python tests/test_regression.py
-+python tools/smoke_demo.py
-+python eval/run_eval_unified.py --mock
-+python tools/capacity_plan_service.py --service-seconds 0.5,1,3
-+```
-+
-+回归覆盖了非法分类token计费、升级失败标记、双提供方失败、旧SQLite迁移、并发记录隔离、HTTP鉴权和接口。统一评测保存全部策略答案及状态；仅在确认模型服务、密钥和预算后使用--real。旧run_eval_stdlib.py用于历史追溯，新的实验使用run_eval_unified.py。
-+
-+本地0.0028元/千token是历史价格情景参数，来自8元/小时和假设800 tok/s的示例折算，不是APU的32.6 tok/s实测租赁成本。服务时间预算已将8小时活跃窗口、分类占用、本地升级率和冗余纳入；0.5/1/3秒只是明确假设，必须用目标环境压测替换。
-+
-+当前已修复与仍存在的边界分别见docs/engineering_revision.md；质量盲评、冻结留出集和外部验收协议见docs/quality_protocol.md。下方原版“已知问题”保留为P0历史记录，若与修订记录不同，以修订记录为准。原来的目录与依赖说明仍可用于FastAPI入口。
-+
-+外部使用者验证记录：李晓慧（未参与开发者），2026-11-10，Windows 11 / Python 3.12，仓库 main@5b41886（Download ZIP）。流程：安装依赖 → 29 项回归全部通过（4.0 秒）→ MOCK 启动 → 简单请求路由本地、复杂请求路由云端 → 统计落库正常；全程约 20 分钟；遇到 cmd 跨盘符 cd 未加 /d 的问题并按提示解决。MOCK 模式仅验证工程链路，不构成模型质量证据。
-+
-+演示视频：[docs/demo.mp4](docs/demo.mp4)（2分33秒：项目介绍、终端依赖安装、简单/复杂请求路由演示与历史批次指标说明）
-+
-+Windows cmd 用户注意：跨盘符切目录需 `cd /d E:\路径`，设环境变量用 `set MOCK_MODE=1`（cmd 写法），此提示来自上述外部使用者实测反馈。
-+
-+## 这是什么
+
+本交付修订于2026-11-09，历史GPU实验不变。本次新增29项自动回归、独立进程HTTP演示、统一三策略评测与服务时间容量模型。MOCK结果只验证工程，不冒充模型质量。外部验证已于2026-11-10由未参与开发者完成（见下方记录）；演示视频已补充，见 docs/demo.mp4（2分33秒）。
+
+最短离线运行路径不需要安装第三方包（在项目根目录，已有Python 3.10+）：
+
+```powershell
+$env:MOCK_MODE='1'
+$env:DB_PATH='runs_demo.db'
+python tools/serve_stdlib.py --port 8081
+```
+
+访问 http://127.0.0.1:8081，依次输入“你好”、进程池任务和SQL review，查看路由与统计。该轻量入口复用app.agent/store，不提供在线清空数据库；原FastAPI界面仍可选装requirements.txt后使用。
+
+```bash
+python tests/test_regression.py
+python tools/smoke_demo.py
+python eval/run_eval_unified.py --mock
+python tools/capacity_plan_service.py --service-seconds 0.5,1,3
+```
+
+回归覆盖了非法分类token计费、升级失败标记、双提供方失败、旧SQLite迁移、并发记录隔离、HTTP鉴权和接口。统一评测保存全部策略答案及状态；仅在确认模型服务、密钥和预算后使用--real。旧run_eval_stdlib.py用于历史追溯，新的实验使用run_eval_unified.py。
+
+本地0.0028元/千token是历史价格情景参数，来自8元/小时和假设800 tok/s的示例折算，不是APU的32.6 tok/s实测租赁成本。服务时间预算已将8小时活跃窗口、分类占用、本地升级率和冗余纳入；0.5/1/3秒只是明确假设，必须用目标环境压测替换。
+
+当前已修复与仍存在的边界分别见docs/engineering_revision.md；质量盲评、冻结留出集和外部验收协议见docs/quality_protocol.md。下方原版“已知问题”保留为P0历史记录，若与修订记录不同，以修订记录为准。原来的目录与依赖说明仍可用于FastAPI入口。
+
+外部使用者验证记录：李晓慧（未参与开发者），2026-11-10，Windows 11 / Python 3.12，仓库 main@5b41886（Download ZIP）。流程：安装依赖 → 29 项回归全部通过（4.0 秒）→ MOCK 启动 → 简单请求路由本地、复杂请求路由云端 → 统计落库正常；全程约 20 分钟；遇到 cmd 跨盘符 cd 未加 /d 的问题并按提示解决。MOCK 模式仅验证工程链路，不构成模型质量证据。
+
+演示视频：[docs/demo.mp4](docs/demo.mp4)（2分33秒：项目介绍、终端依赖安装、简单/复杂请求路由演示与历史批次指标说明）
+
+Windows cmd 用户注意：跨盘符切目录需 `cd /d E:\路径`，设环境变量用 `set MOCK_MODE=1`（cmd 写法），此提示来自上述外部使用者实测反馈。
+
+## 这是什么
 
 本项目面向中小规模人工智能应用，研究简单请求交给本地小模型、复杂请求交给云端大模型时，调用成本、响应延迟和质量风险如何变化。当前实现是可运行的单轮文本工作流，主要价值在于端点适配、显式路由、升级处置、逐请求记录以及可复算的对照实验。它没有多轮记忆、工具执行、检索增强或自主科研能力，不应把名称中的 Agent 理解为完整自治系统。
 
@@ -133,4 +133,4 @@ python tools/capacity_plan.py --gpu-tps 32.6
 
 ## 功能与复用清单
 
-交付提供以下可检查功能：规则分流、小模型JSON分类、长度兜底、非法分类用量保留、SQL结构保护、本地/云端兼容调用、形式自检、升级成功/失败分开记录、双端失败落库、SQLite旧库迁移、显式连接关闭、分项费用统计、零依赖HTTP演示、统一三策略评测、全部策略答案JSONL、29项回归、服务时间预算和图形源文件。核心模块分布于app、eval、tools及deploy，满足系统原型的模块化组织。外部使用者验证已于2026-11-10完成（见文件头部记录）；演示视频待作者补充。
+交付提供以下可检查功能：规则分流、小模型JSON分类、长度兜底、非法分类用量保留、SQL结构保护、本地/云端兼容调用、形式自检、升级成功/失败分开记录、双端失败落库、SQLite旧库迁移、显式连接关闭、分项费用统计、零依赖HTTP演示、统一三策略评测、全部策略答案JSONL、29项回归、服务时间预算和图形源文件。核心模块分布于app、eval、tools及deploy，满足系统原型的模块化组织。外部使用者验证已于2026-11-10完成（见文件头部记录）；演示视频见 [docs/demo.mp4](docs/demo.mp4)（2 分 33 秒）。
